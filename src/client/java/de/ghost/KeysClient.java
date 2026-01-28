@@ -2,13 +2,11 @@ package de.ghost;
 
 import net.fabricmc.api.ClientModInitializer;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.platform.InputConstants.Key;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import org.lwjgl.glfw.GLFW;
@@ -17,95 +15,91 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Options;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.loader.api.FabricLoader;
 
 public class KeysClient implements ClientModInitializer {
-	 Options options = Minecraft.getInstance().options;
-List<KeyMapping> keys = new ArrayList<>(Arrays.asList(
-		options.keyUp,
-		options.keyDown,	
-		options.keyLeft,
-		options.keyRight,
-		options.keyJump,
-		options.keySprint,
-		options.keyInventory,
-		options.keySwapOffhand,
-		options.keyDrop,
-		options.keyUse,
-		options.keyAttack,
-		options.keyPickItem,
-		options.keyChat,
-		options.keyCommand,
-		options.keyScreenshot,
-		options.keyTogglePerspective,
-		options.keySmoothCamera,
-		options.keyFullscreen,
-		options.keySpectatorOutlines,
-		options.keyAdvancements
-	));
+	List<String> profiles = List.of("profile1", "profile2", "profile3");
+	int currentIndex = 0;
 
 	@Override
 	public void onInitializeClient() {
-		keys.addAll(List.of(options.keyMappings));
-
 		KeyMapping.Category category1 = KeyMapping.Category
 				.register(Identifier.fromNamespaceAndPath("keys", "profiles"));
 
-		KeyMapping binding1 = KeyBindingHelper
-				.registerKeyBinding(new KeyMapping("Set Keys Profile 1",
+		KeyMapping next = KeyBindingHelper
+				.registerKeyBinding(new KeyMapping("Next profile",
 						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, category1));
-		KeyMapping binding2 = KeyBindingHelper
-				.registerKeyBinding(new KeyMapping("Set Keys Profile 2",
+		KeyMapping prev = KeyBindingHelper
+				.registerKeyBinding(new KeyMapping("Previous profile",
 						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, category1));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player == null)
 				return;
 
-			while (binding1.consumeClick()) {
-				client.player.displayClientMessage(Component.literal("Key 1 was pressed!"), false);
-				switchProfiles();
+			while (next.consumeClick()) {
+				var currentProfile = this.profiles.get(currentIndex);
+				saveCurrentProfile(currentProfile);
+				var nextIndex = (currentIndex + 1) % profiles.size();
+				var nextProfile = this.profiles.get(nextIndex);
+				loadProfile(nextProfile);
+				client.player.displayClientMessage(Component.literal("Loaded " + nextProfile), false);
+				currentIndex = nextIndex;
 			}
 
-			while (binding2.consumeClick()) {
-				client.player.displayClientMessage(Component.literal("Key 2 was pressed!"), false);
-				setProfile2();
+			while (prev.consumeClick()) {
+				var currentProfile = this.profiles.get(currentIndex);
+				saveCurrentProfile(currentProfile);
+				var nextIndex = (currentIndex + profiles.size() - 1) % profiles.size();
+				var nextProfile = this.profiles.get(nextIndex);
+				loadProfile(nextProfile);
+				client.player.displayClientMessage(Component.literal("Loaded " + nextProfile), false);
+				currentIndex = nextIndex;
 			}
 		});
 	}
 
-	public void switchProfiles() {
+	public void saveCurrentProfile(String name) {
+		var keys = Minecraft.getInstance().options.keyMappings;
 		var mappings = "";
 		for (KeyMapping key : keys) {
-			var keyValue = key.saveString();
 			var keyName = key.getName();
+			var keyValue = key.saveString();
 			mappings += keyName + "=" + keyValue + "\n";
 		}
 		try {
-			Files.writeString(Path.of("~/mappings.txt"), mappings);
+			var file = FabricLoader.getInstance().getConfigDir().resolve("profiles/" + name + ".txt");
+			Files.createDirectories(file.getParent());
+			Files.writeString(file, mappings);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	public void setProfile1() {
-		var options = Minecraft.getInstance().options;
-		var upKey = options.keyUp;
-		var downKey = options.keyDown;
-		upKey.setKey(downKey.getDefaultKey());
-		downKey.setKey(upKey.getDefaultKey());
-		options.save();
-		options.load();
-	}
 
-	public void setProfile2() {
+	public void loadProfile(String name) {
+		var mappings = new HashMap<String, InputConstants.Key>();
+		try {
+			var file = FabricLoader.getInstance().getConfigDir().resolve("profiles/" + name + ".txt");
+			var content = Files.readString(file);
+			for (var line : content.split("\n")) {
+				var items = line.split("=");
+				assert items.length == 2;
+				mappings.put(items[0], InputConstants.getKey(items[1]));
+			}
+		} catch (IOException e) {
+			// Ignore for now
+		}
 		var options = Minecraft.getInstance().options;
-		var downKey = options.keyDown;
-		var upKey = options.keyUp;
-		upKey.setKey(upKey.getDefaultKey());
-		downKey.setKey(downKey.getDefaultKey());
+		var keys = options.keyMappings;
+		for (var key : keys) {
+			var newKey = mappings.get(key.getName());
+			if (newKey != null) {
+				key.setKey(newKey);
+			}
+		}
+
 		options.save();
 		options.load();
 	}
