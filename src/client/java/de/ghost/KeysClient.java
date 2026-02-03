@@ -5,7 +5,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -22,6 +21,7 @@ import net.fabricmc.loader.api.FabricLoader;
 public class KeysClient implements ClientModInitializer {
 	List<String> profiles = List.of("profile1", "profile2", "profile3");
 	int currentIndex = 0;
+	static final String PROFILES_DIR = "keys/profiles/";
 
 	@Override
 	public void onInitializeClient() {
@@ -70,7 +70,7 @@ public class KeysClient implements ClientModInitializer {
 			mappings += keyName + "=" + keyValue + "\n";
 		}
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve("profiles/" + name + ".txt");
+			var file = FabricLoader.getInstance().getConfigDir().resolve(PROFILES_DIR + name + ".txt");
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, mappings);
 		} catch (IOException e) {
@@ -81,7 +81,7 @@ public class KeysClient implements ClientModInitializer {
 	public void loadProfile(String name) {
 		var mappings = new HashMap<String, InputConstants.Key>();
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve("profiles/" + name + ".txt");
+			var file = FabricLoader.getInstance().getConfigDir().resolve(PROFILES_DIR + name + ".txt");
 			var content = Files.readString(file);
 			for (var line : content.split("\n")) {
 				var items = line.split("=");
