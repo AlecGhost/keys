@@ -20,11 +20,13 @@ import net.fabricmc.loader.api.FabricLoader;
 
 public class KeysClient implements ClientModInitializer {
 	List<String> profiles = List.of("profile1", "profile2", "profile3");
-	int currentIndex = 0;
+	int currentProfilesIndex = 0;
 	static final String PROFILES_DIR = "keys/profiles/";
+	static final String CONFIG_DIR = "keys/";
 
 	@Override
 	public void onInitializeClient() {
+		loadConfig();
 		KeyMapping.Category category1 = KeyMapping.Category
 				.register(Identifier.fromNamespaceAndPath("keys", "profiles"));
 
@@ -40,23 +42,25 @@ public class KeysClient implements ClientModInitializer {
 				return;
 
 			while (next.consumeClick()) {
-				var currentProfile = this.profiles.get(currentIndex);
+				var currentProfile = this.profiles.get(currentProfilesIndex);
 				saveCurrentProfile(currentProfile);
-				var nextIndex = (currentIndex + 1) % profiles.size();
+				var nextIndex = (currentProfilesIndex + 1) % profiles.size();
 				var nextProfile = this.profiles.get(nextIndex);
 				loadProfile(nextProfile);
 				client.player.displayClientMessage(Component.literal("Loaded " + nextProfile), false);
-				currentIndex = nextIndex;
+				currentProfilesIndex = nextIndex;
+				saveConfig();
 			}
 
 			while (prev.consumeClick()) {
-				var currentProfile = this.profiles.get(currentIndex);
+				var currentProfile = this.profiles.get(currentProfilesIndex);
 				saveCurrentProfile(currentProfile);
-				var nextIndex = (currentIndex + profiles.size() - 1) % profiles.size();
+				var nextIndex = (currentProfilesIndex + profiles.size() - 1) % profiles.size();
 				var nextProfile = this.profiles.get(nextIndex);
 				loadProfile(nextProfile);
 				client.player.displayClientMessage(Component.literal("Loaded " + nextProfile), false);
-				currentIndex = nextIndex;
+				currentProfilesIndex = nextIndex;
+				saveConfig();
 			}
 		});
 	}
@@ -102,5 +106,32 @@ public class KeysClient implements ClientModInitializer {
 
 		options.save();
 		options.load();
+	}
+
+	public void loadConfig() {
+		try {
+			var file = FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR + "config.txt");
+			var content = Files.readString(file);
+			for (var line : content.split("\n")) {
+				var items = line.split("=");
+				assert items.length == 2;
+				if (items[0].equals("currentProfileIndex")) {
+					currentProfilesIndex = Integer.parseInt(items[1]);
+				}
+			}
+		} catch (IOException e) {
+			// Ignore for now
+		}
+	}
+
+	public void saveConfig() {
+		var config = "currentProfileIndex=" + currentProfilesIndex + "\n";
+		try {
+			var file = FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR + "config.txt");
+			Files.createDirectories(file.getParent());
+			Files.writeString(file, config);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
