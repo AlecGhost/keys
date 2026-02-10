@@ -4,7 +4,9 @@ import net.fabricmc.api.ClientModInitializer;
 import com.mojang.blaze3d.platform.InputConstants;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 
@@ -14,19 +16,20 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class KeysClient implements ClientModInitializer {
-	List<String> profiles = List.of("profile1", "profile2", "profile3");
+	List<String> profiles = new java.util.ArrayList<>();
 	int currentProfilesIndex = 0;
 	static final String PROFILES_DIR = "keys/profiles/";
 	static final String CONFIG_DIR = "keys/";
+	static final Path FABRIC_DIR = FabricLoader.getInstance().getConfigDir();
 
 	@Override
 	public void onInitializeClient() {
-		loadConfig();
 		KeyMapping.Category category1 = KeyMapping.Category
 				.register(Identifier.fromNamespaceAndPath("keys", "profiles"));
 
@@ -36,6 +39,8 @@ public class KeysClient implements ClientModInitializer {
 		KeyMapping prev = KeyBindingHelper
 				.registerKeyBinding(new KeyMapping("Previous profile",
 						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, category1));
+
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> setup(client));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player == null)
@@ -65,6 +70,30 @@ public class KeysClient implements ClientModInitializer {
 		});
 	}
 
+	public void setup(Minecraft client) {
+		loadConfig();
+		var dir = FABRIC_DIR.resolve(PROFILES_DIR);
+		try (DirectoryStream<Path> ds = Files.newDirectoryStream(dir)) {
+			for (Path filePath : ds) {
+				if (Files.isRegularFile(filePath)) {
+					var fileName = filePath.getFileName().toString().replace(".txt", "");
+					profiles.add(fileName);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (profiles.size() == 0) {
+			saveCurrentProfile("default");
+			profiles.add("default");
+			currentProfilesIndex = 0;
+		}
+		if (currentProfilesIndex >= profiles.size() || currentProfilesIndex < 0) {
+			currentProfilesIndex = 0;
+		}
+		loadProfile(profiles.get(currentProfilesIndex));
+	}
+
 	public void saveCurrentProfile(String name) {
 		var keys = Minecraft.getInstance().options.keyMappings;
 		var mappings = "";
@@ -74,7 +103,7 @@ public class KeysClient implements ClientModInitializer {
 			mappings += keyName + "=" + keyValue + "\n";
 		}
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve(PROFILES_DIR + name + ".txt");
+			var file = FABRIC_DIR.resolve(PROFILES_DIR + name + ".txt");
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, mappings);
 		} catch (IOException e) {
@@ -85,7 +114,7 @@ public class KeysClient implements ClientModInitializer {
 	public void loadProfile(String name) {
 		var mappings = new HashMap<String, InputConstants.Key>();
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve(PROFILES_DIR + name + ".txt");
+			var file = FABRIC_DIR.resolve(PROFILES_DIR + name + ".txt");
 			var content = Files.readString(file);
 			for (var line : content.split("\n")) {
 				var items = line.split("=");
@@ -110,7 +139,7 @@ public class KeysClient implements ClientModInitializer {
 
 	public void loadConfig() {
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR + "config.txt");
+			var file = FABRIC_DIR.resolve(CONFIG_DIR + "config.txt");
 			var content = Files.readString(file);
 			for (var line : content.split("\n")) {
 				var items = line.split("=");
@@ -127,7 +156,7 @@ public class KeysClient implements ClientModInitializer {
 	public void saveConfig() {
 		var config = "currentProfileIndex=" + currentProfilesIndex + "\n";
 		try {
-			var file = FabricLoader.getInstance().getConfigDir().resolve(CONFIG_DIR + "config.txt");
+			var file = FABRIC_DIR.resolve(CONFIG_DIR + "config.txt");
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, config);
 		} catch (IOException e) {
