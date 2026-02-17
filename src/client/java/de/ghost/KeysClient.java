@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.Minecraft;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.loader.api.FabricLoader;
@@ -41,6 +42,8 @@ public class KeysClient implements ClientModInitializer {
 						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, category1));
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> setup(client));
+
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> onJoinWorld(client));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player == null)
@@ -162,5 +165,15 @@ public class KeysClient implements ClientModInitializer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void onJoinWorld(Minecraft client) {
+
+		client.execute(() -> {
+			var currentProfile = profiles.size() > 0 ? profiles.get(currentProfilesIndex) : "default";
+			if (client.player != null) {
+				client.player.displayClientMessage(Component.literal("Current profile " + currentProfile), false);
+			}
+		});
 	}
 }
