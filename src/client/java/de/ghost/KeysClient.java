@@ -35,11 +35,14 @@ public class KeysClient implements ClientModInitializer {
 				.register(Identifier.fromNamespaceAndPath("keys", "profiles"));
 
 		KeyMapping next = KeyBindingHelper
-				.registerKeyBinding(new KeyMapping("Next profile",
-						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, category1));
+				.registerKeyBinding(new KeyMapping("Next Profile",
+						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_I, category1));
 		KeyMapping prev = KeyBindingHelper
-				.registerKeyBinding(new KeyMapping("Previous profile",
+				.registerKeyBinding(new KeyMapping("Previous Profile",
 						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, category1));
+		KeyMapping openSettings = KeyBindingHelper
+				.registerKeyBinding(new KeyMapping("Open Keys Settings",
+						InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_O, category1));
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> setup(client));
 
@@ -69,6 +72,11 @@ public class KeysClient implements ClientModInitializer {
 				client.player.displayClientMessage(Component.literal("Loaded " + nextProfile), false);
 				currentProfilesIndex = nextIndex;
 				saveConfig();
+			}
+
+			while (openSettings.consumeClick()) {
+				Minecraft.getInstance().setScreen(
+						new KeysSettingScreen(Component.empty()));
 			}
 		});
 	}
