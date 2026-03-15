@@ -12,9 +12,11 @@ import net.minecraft.network.chat.Component;
 public class KeysSettingScreen extends Screen {
 	int originY = 40;
 	int buttonHeight = 20;
-	EditBox profileNameTextField;
-	Button buttonWidget;
 	String profileName = "Profile Name";
+	EditBox profileNameTextField;
+	Button profileNameButton;
+	Button duplicateButton;
+	Button deleteButton;
 
 	public KeysSettingScreen(Component title) {
 		super(title);
@@ -30,21 +32,41 @@ public class KeysSettingScreen extends Screen {
 
 	@Override
 	protected void init() {
-		int boxWidth = this.width / 2;
-		int originX = (this.width - boxWidth) / 2;
-		int buttonWidth = boxWidth / 2;
+		int space1 = 10;
+		int space2 = space1 * 2;
+		int centerX = this.width / 2;
+		int boxWidth = this.width / 3;
+		int boxNameWidth = this.width * 2 / 9;
+		int buttonWidth = this.width / 12;
 
-		profileNameTextField = new EditBox(this.font, originX, originY, buttonWidth, buttonHeight,
+		int originX = (this.width - boxWidth) / 2 + space1;
+		int nameBoxWidth = boxNameWidth;
+
+		int duplicateButtonX = centerX + buttonWidth + space1;
+		int duplicateButtonWidth = buttonWidth - space2;
+
+		int deleteButtonX = centerX + buttonWidth * 2 + space1;
+		int deleteButtonWidth = buttonWidth - space2;
+
+		profileNameTextField = new EditBox(this.font, originX, originY, nameBoxWidth, buttonHeight,
 				Component.literal(profileName));
 		this.addRenderableWidget(profileNameTextField);
 		profileNameTextField.visible = false;
 		profileNameTextField.setValue(profileName);
 
-		buttonWidget = Button.builder(Component.literal(profileName), (btn) -> {
+		profileNameButton = Button.builder(Component.literal(profileName), (btn) -> {
 			profileNameTextField.visible = true;
 			btn.visible = false;
-		}).bounds(originX, originY, buttonWidth, buttonHeight).build();
-		this.addRenderableWidget(buttonWidget);
+		}).bounds(originX, originY, nameBoxWidth, buttonHeight).build();
+		this.addRenderableWidget(profileNameButton);
+
+		duplicateButton = Button.builder(Component.literal("Duplicate"), (btn) -> {
+		}).bounds(duplicateButtonX, originY, duplicateButtonWidth, buttonHeight).build();
+		this.addRenderableWidget(duplicateButton);
+
+		deleteButton = Button.builder(Component.literal("Delete"), (btn) -> {
+		}).bounds(deleteButtonX, originY, deleteButtonWidth, buttonHeight).build();
+		this.addRenderableWidget(deleteButton);
 	}
 
 	@Override
@@ -53,10 +75,10 @@ public class KeysSettingScreen extends Screen {
 			String newProfileName = profileNameTextField.getValue();
 			if (!newProfileName.isEmpty()) {
 				profileName = newProfileName;
-				buttonWidget.setMessage(Component.literal(profileName));
+				profileNameButton.setMessage(Component.literal(profileName));
 			}
 			profileNameTextField.visible = false;
-			buttonWidget.visible = true;
+			profileNameButton.visible = true;
 		}
 		return super.keyPressed(keyEvent);
 	}
