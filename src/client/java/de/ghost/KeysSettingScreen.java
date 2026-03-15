@@ -3,35 +3,42 @@ package de.ghost;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class KeysSettingScreen extends Screen {
-	int headerY = 40;
+	int originY = 40;
+	int buttonHeight = 20;
+
 	public KeysSettingScreen(Component title) {
 		super(title);
 	}
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
-		Component header = Component.literal("Key Bind Profiles");
+		Component headerText = Component.literal("Key Bind Profiles");
 		super.render(graphics, mouseX, mouseY, delta);
-		graphics.drawString(this.font, header, this.width / 2 - this.font.width(header) / 2, this.headerY - this.font.lineHeight - 10, 0xFFFFFFFF, true);
+		graphics.drawString(this.font, headerText, this.width / 2 - this.font.width(headerText) / 2,
+				this.originY - this.font.lineHeight - 10, 0xFFFFFFFF, true);
 	}
 
 	@Override
 	protected void init() {
-		EditBox editBox = new EditBox(this.font, 40, 40 + 30, 200, 20, Component.literal("Type here"));
-		this.addRenderableWidget(editBox);
+		int boxWidth = this.width / 2;
+		int originX = (this.width - boxWidth) / 2;
+		int buttonWidth = boxWidth / 2;
+		String profileName = "Profile Name";
 
-		Button buttonWidget = Button.builder(Component.literal("Hello World"), (btn) -> {
-			this.minecraft.getToastManager().addToast(
-					SystemToast.multiline(this.minecraft, SystemToast.SystemToastId.NARRATOR_TOGGLE,
-							Component.nullToEmpty("Hello World!"), Component.nullToEmpty("This is a toast.")));
-		}).bounds(40, 40, 120, 20).build();
+		EditBox profileNameTextField = new EditBox(this.font, originX, originY, buttonWidth, buttonHeight,
+				Component.literal(profileName));
+		this.addRenderableWidget(profileNameTextField);
+		profileNameTextField.visible = false;
+
+		Button buttonWidget = Button.builder(Component.literal(profileName), (btn) -> {
+			profileNameTextField.visible = true;
+			btn.visible = false;
+		}).bounds(originX, originY, buttonWidth, buttonHeight).build();
 		this.addRenderableWidget(buttonWidget);
-
 	}
 
 }
